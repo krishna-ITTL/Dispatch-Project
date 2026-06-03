@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
+import { Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
 
 const StuffList = () => {
   const { user } = useOutletContext();
@@ -141,9 +142,9 @@ const StuffList = () => {
 
       <div className="packing-stats" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>🗂️</div><div className="label">Total Items</div><div className="value">{total}</div></div>
-        <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>✅</div><div className="label">Available</div><div className="value val-green">{available}</div></div>
+        <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /></div><div className="label">Available</div><div className="value val-green">{available}</div></div>
         <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>⚠️</div><div className="label">Low Stock</div><div className="value val-orange">{lowStock}</div></div>
-        <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>❌</div><div className="label">Out of Stock</div><div className="value val-red">{outOfStock}</div></div>
+        <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}><XCircle size={22} style={{color:'#e53e3e'}} /></div><div className="label">Out of Stock</div><div className="value val-red">{outOfStock}</div></div>
       </div>
 
       <div className="filter-tabs" style={{ marginBottom: '20px' }}>
@@ -183,8 +184,8 @@ const StuffList = () => {
                     </span>
                   </td>
                   <td style={{ display: 'flex', gap: '4px' }}>
-                    {canEdit() && <button className="icon-btn" onClick={() => openModal(p)}>✏️</button>}
-                    {canDelete() && <button className="icon-btn danger" onClick={() => deleteItem(p.id, p.name)}>🗑️</button>}
+                    {canEdit() && <button className="icon-btn" onClick={() => openModal(p)}><img src="/Asserts/edit.gif" width="18" height="18" alt="Edit" /></button>}
+                    {canDelete() && <button className="icon-btn danger" onClick={() => deleteItem(p.id, p.name)}><img src="/Asserts/bin.gif" width="18" height="18" alt="Delete" /></button>}
                   </td>
                 </tr>
               ))

@@ -32,7 +32,13 @@ export const SmartItemInput = ({ value, onChange, masterList = [], placeholder =
       if (!exact) {
         let best = null;
         let bestDist = 3;
-        masterList.forEach(i => {
+        
+        // Optimization: Pre-filter by first letter and cap candidates to avoid long iterations
+        const firstLetter = trimmed[0];
+        let candidates = masterList.filter(i => i.name.toLowerCase()[0] === firstLetter);
+        if (candidates.length > 50) candidates = candidates.slice(0, 50);
+
+        candidates.forEach(i => {
           const n = i.name.toLowerCase();
           if (Math.abs(n.length - trimmed.length) <= 2) {
             const d = lev(trimmed, n);

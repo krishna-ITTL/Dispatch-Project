@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
 import { logActivity } from '../lib/activityLogger';
+import { Pencil, Trash2, CheckCircle } from 'lucide-react';
 
 const Vehicles = () => {
   const { user } = useOutletContext();
@@ -25,6 +26,7 @@ const Vehicles = () => {
   const [formData, setFormData] = useState({
     num: '', type: '', wo_num: '', customer: '', driver: '', phone: '', shift: '', status: 'Pending'
   });
+  const [fetchingWO, setFetchingWO] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -34,14 +36,17 @@ const Vehicles = () => {
     try {
       setLoading(true);
       const [
-        { data: vehs },
-        { data: wos },
-        { data: masterLists }
+        { data: vehs, error: vehErr },
+        { data: wos, error: woErr },
+        { data: masterLists, error: mlErr }
       ] = await Promise.all([
         supabase.from('vehicles').select('*').order('id', { ascending: false }),
         supabase.from('work_orders').select('wo_num, customer'),
         supabase.from('master_list').select('*').in('category_key', ['Vehicle Types', 'Customers'])
       ]);
+
+      if (woErr) console.warn('Failed to fetch work orders (check RLS policy):', woErr.message);
+      if (mlErr) console.warn('Failed to fetch master list:', mlErr.message);
 
       setVehicles(vehs || []);
       setWorkOrders(wos || []);
@@ -94,10 +99,47 @@ const Vehicles = () => {
 
   const closeModal = () => setIsModalOpen(false);
 
-  const handleWOChange = (e) => {
+  const handleWOChange = async (e) => {
     const woNum = e.target.value;
-    const wo = workOrders.find(x => x.wo_num === woNum);
-    setFormData({ ...formData, wo_num: woNum, customer: wo ? wo.customer : '' });
+    
+    // Update work order field immediately
+    setFormData(prev => ({ ...prev, wo_num: woNum }));
+
+    if (!woNum || woNum === '') {
+      // Clear auto-filled fields when "-- None --" is selected
+      setFormData(prev => ({ ...prev, wo_num: '', customer: '' }));
+      return;
+    }
+
+    // Fetch full work order details from Supabase
+    setFetchingWO(true);
+    try {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('wo_num, customer')
+        .eq('wo_num', woNum)
+        .single();
+
+      if (error || !data) {
+        console.error('Failed to fetch work order details:', error);
+        // Fallback: try matching from in-memory list
+        const wo = workOrders.find(x => x.wo_num === woNum);
+        setFormData(prev => ({ ...prev, customer: wo ? wo.customer : '' }));
+      } else {
+        // Auto-populate customer from fetched work order
+        setFormData(prev => ({
+          ...prev,
+          customer: data.customer || '',
+        }));
+      }
+    } catch (err) {
+      console.error('WO fetch error:', err);
+      // Fallback to in-memory match
+      const wo = workOrders.find(x => x.wo_num === woNum);
+      setFormData(prev => ({ ...prev, customer: wo ? wo.customer : '' }));
+    } finally {
+      setFetchingWO(false);
+    }
   };
 
   const saveVehicle = async () => {
@@ -167,7 +209,7 @@ const Vehicles = () => {
           <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>🚛</div><div className="label">Total</div><div className="value">{stats.total}</div><div className="sub">All vehicles</div></div>
           <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>📦</div><div className="label">Packing</div><div className="value val-orange">{stats.packing}</div></div>
           <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>🚚</div><div className="label">Loading</div><div className="value val-blue">{stats.loading}</div></div>
-          <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}>✅</div><div className="label">Dispatched</div><div className="value val-green">{stats.dispatched}</div></div>
+          <div className="packing-stat"><div className="icon" style={{fontSize: '24px'}}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /></div><div className="label">Dispatched</div><div className="value val-green">{stats.dispatched}</div></div>
         </div>
       )}
 
@@ -224,8 +266,8 @@ const Vehicles = () => {
                     </select>
                   </td>
                   <td style={{ display: 'flex', gap: '4px' }}>
-                    {canEdit() && <button className="icon-btn" onClick={() => openModal(v)}>✏️</button>}
-                    {canDelete() && <button className="icon-btn danger" onClick={() => deleteVehicle(v.id, v.num)}>🗑️</button>}
+                    {canEdit() && <button className="icon-btn" onClick={() => openModal(v)}><img src="/Asserts/edit.gif" width="18" height="18" alt="Edit" /></button>}
+                    {canDelete() && <button className="icon-btn danger" onClick={() => deleteVehicle(v.id, v.num)}><img src="/Asserts/bin.gif" width="18" height="18" alt="Delete" /></button>}
                   </td>
                 </tr>
               ))
@@ -261,7 +303,7 @@ const Vehicles = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label>Work Order</label>
+                <label>Work Order {fetchingWO && <span style={{ fontSize: '12px', color: '#718096', fontWeight: '400', marginLeft: '8px' }}>Fetching details...</span>}</label>
                 <select value={formData.wo_num} onChange={handleWOChange} style={{ color: formData.wo_num ? '#e53e3e' : '#1a202c', fontWeight: formData.wo_num ? '600' : 'normal' }}>
                   <option value="">-- None --</option>
                   {workOrders.map(w => <option key={w.wo_num} value={w.wo_num}>{w.wo_num}</option>)}

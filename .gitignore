@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (SENSITIVE — never commit)
+.env
+.env.local
+.env.production
+.env.staging
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +28,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test files
+test_*.js
+make_sql_idempotent.py
+replace_icons.py
+
+# Supabase edge functions (local dev)
+supabase/
+
+# Reports and temporary files
+Reports and md files/

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../../components/ToastProvider';
+import { Eye } from 'lucide-react';
 import './manager.css';
 
 const LOAD_STATUSES = ['Loading Pending', 'Loading In Progress', 'Ready for Dispatch', 'Dispatched'];
@@ -141,7 +142,7 @@ const ManagerLoadingList = () => {
                   </span>
                 </td>
                 <td>
-                  <button className="icon-btn" title="View Detail" onClick={() => setViewingLL(ll)}>👁️</button>
+                  <button className="icon-btn" title="View Detail" onClick={() => setViewingLL(ll)}><img src="/Asserts/view.gif" width="18" height="18" alt="View" /></button>
                 </td>
               </tr>
             )})}

@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
+import { Pencil, Trash2, ShieldCheck, UserCog, HardHat, Lock, BarChart3, CheckCircle, XCircle } from 'lucide-react';
 
 const Users = () => {
   const { user } = useOutletContext();
   const toast = useToast();
+
+  // Authorization guard - only Admin can manage users
+  if (user?.role !== 'Admin') {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <h2>Access Denied</h2>
+        <p>Only administrators can manage users.</p>
+      </div>
+    );
+  }
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,10 +52,16 @@ const Users = () => {
   const saveUser = async () => {
     try {
       if (editingUser) {
-        const { error } = await supabase.from('profiles').update({ name: formData.name, role: formData.role }).eq('id', editingUser.id);
+        // ── EDIT existing user ─────────────────────────────────────
+        const { error } = await supabase
+          .from('profiles')
+          .update({ name: formData.name, role: formData.role })
+          .eq('id', editingUser.id);
         if (error) throw error;
-        toast('User updated');
+        toast('User updated successfully');
+  
       } else {
+        // Validation
         if (!formData.email || !formData.password || !formData.name) {
           toast('Name, email, and password are required', 'error');
           return;
@@ -52,33 +70,58 @@ const Users = () => {
           toast('Password must be at least 6 characters', 'error');
           return;
         }
-        
-        // Use Supabase Auth to create user
-        const { data, error } = await supabase.auth.signUp({
+
+        // Use the same proxy URL as the main client to bypass adblockers
+        const clientUrl = import.meta.env.DEV
+          ? `${window.location.origin}/supabase-api`
+          : import.meta.env.VITE_SUPABASE_URL;
+
+        // Step 1 — Create auth user using isolated client (no session interference)
+        const tempClient = createClient(
+          clientUrl,
+          import.meta.env.VITE_SUPABASE_ANON_KEY,
+          { auth: { persistSession: false, autoRefreshToken: false } }
+        );
+
+        const { data: signUpData, error: signUpError } = await tempClient.auth.signUp({
           email: formData.email,
           password: formData.password,
-          options: {
-            data: { name: formData.name }
-          }
         });
-        
-        if (error) throw error;
-        
-        if (data?.user) {
-          if (data.user.identities && data.user.identities.length === 0) {
-            throw new Error('This email is already registered.');
+
+        if (signUpError) throw new Error(`Auth creation failed: ${signUpError.message}`);
+        if (!signUpData?.user?.id) throw new Error('No user ID returned from Supabase');
+
+        // Step 2 — Write profile using the new user's own session token
+        const newUserToken = signUpData.session?.access_token;
+        if (!newUserToken) throw new Error('No session returned — verify email confirmation is disabled in Supabase Dashboard');
+
+        const newUserClient = createClient(
+          clientUrl,
+          import.meta.env.VITE_SUPABASE_ANON_KEY,
+          {
+            global: { headers: { Authorization: `Bearer ${newUserToken}` } },
+            auth: { persistSession: false, autoRefreshToken: false }
           }
-          // Upsert the profile with selected role
-          const { error: profErr } = await supabase.from('profiles').upsert([
-            { id: data.user.id, name: formData.name, role: formData.role }
-          ]);
-          if (profErr) throw profErr;
-        }
-        toast('User created! They may need to verify their email.');
+        );
+
+        const { error: profileError } = await newUserClient
+          .from('profiles')
+          .upsert([{
+            id:   signUpData.user.id,
+            name: formData.name,
+            role: formData.role,
+          }], { onConflict: 'id' });
+
+        if (profileError) throw new Error(`Profile setup failed: ${profileError.message}`);
+
+        toast(`User "${formData.name}" created as ${formData.role}`);
       }
+  
       setIsModalOpen(false);
       fetchUsers();
+  
     } catch (e) {
+      console.error('saveUser error:', e);
       toast(e.message || 'Failed to save user', 'error');
     }
   };
@@ -132,8 +175,8 @@ const Users = () => {
                   </td>
                   <td><span style={{ background: roleColor(u.role), color: '#fff', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600' }}>{u.role}</span></td>
                   <td style={{ display: 'flex', gap: '4px' }}>
-                    <button className="icon-btn" onClick={() => openModal(u)}>✏️</button>
-                    {u.id !== user?.id && <button className="icon-btn danger" onClick={() => deleteUser(u.id, u.name)}>🗑️</button>}
+                    <button className="icon-btn" onClick={() => openModal(u)} title="Edit"><img src="/Asserts/edit.gif" width="18" height="18" alt="Edit" /></button>
+                    {u.id !== user?.id && <button className="icon-btn danger" onClick={() => deleteUser(u.id, u.name)} title="Delete"><img src="/Asserts/bin.gif" width="18" height="18" alt="Delete" /></button>}
                   </td>
                 </tr>
               ))
@@ -146,24 +189,24 @@ const Users = () => {
         <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>Role Permissions Summary</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
           <div style={{ background: '#fff5f5', borderRadius: '10px', padding: '16px', border: '1px solid #fed7d7' }}>
-            <h4 style={{ color: '#e53e3e', marginBottom: '12px' }}>🔴 Admin</h4>
-            <div style={{ fontSize: '12px', lineHeight: '22px' }}>✅ All Modules<br/>✅ Create / Edit / Delete<br/>✅ User Management<br/>✅ Reports & Export<br/>✅ Master List</div>
+            <h4 style={{ color: '#e53e3e', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><ShieldCheck size={16} style={{color:'#e53e3e'}} /> Admin</h4>
+            <div style={{ fontSize: '12px', lineHeight: '22px' }}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> All Modules<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Create / Edit / Delete<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> User Management<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Reports & Export<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Master List</div>
           </div>
           <div style={{ background: '#ebf8ff', border: '1px solid #bee3f8', borderRadius: '10px', padding: '16px' }}>
-            <h4 style={{ color: '#3182ce', marginBottom: '12px' }}>🔵 Supervisor</h4>
-            <div style={{ fontSize: '12px', lineHeight: '22px' }}>✅ All Modules<br/>✅ Create / Edit / Delete<br/>❌ User Management<br/>✅ Reports & Export<br/>✅ Master List</div>
+            <h4 style={{ color: '#3182ce', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><UserCog size={16} style={{color:'#3182ce'}} /> Supervisor</h4>
+            <div style={{ fontSize: '12px', lineHeight: '22px' }}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> All Modules<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Create / Edit / Delete<br/><XCircle size={14} style={{color:'#e53e3e', verticalAlign: 'middle', marginRight: '4px'}}/> User Management<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Reports & Export<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Master List</div>
           </div>
           <div style={{ background: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '10px', padding: '16px' }}>
-            <h4 style={{ color: '#38a169', marginBottom: '12px' }}>🟢 User</h4>
-            <div style={{ fontSize: '12px', lineHeight: '22px' }}>✅ Dashboard, WO, Packing, Loading<br/>✅ View & Add only<br/>❌ Delete / Reports / Users</div>
+            <h4 style={{ color: '#38a169', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><HardHat size={16} style={{color:'#38a169'}} /> User</h4>
+            <div style={{ fontSize: '12px', lineHeight: '22px' }}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Dashboard, WO, Packing, Loading<br/><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> View & Add only<br/><XCircle size={14} style={{color:'#e53e3e', verticalAlign: 'middle', marginRight: '4px'}}/> Delete / Reports / Users</div>
           </div>
           <div style={{ background: '#feebc8', border: '1px solid #fbd38d', borderRadius: '10px', padding: '16px' }}>
-            <h4 style={{ color: '#dd6b20', marginBottom: '12px' }}>🟠 Security</h4>
-            <div style={{ fontSize: '12px', lineHeight: '22px' }}>✅ Security Vehicle Entry module<br/>❌ Core modules<br/>❌ Admin / Master Lists</div>
+            <h4 style={{ color: '#dd6b20', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><Lock size={16} style={{color:'#dd6b20'}} /> Security</h4>
+            <div style={{ fontSize: '12px', lineHeight: '22px' }}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> Security Vehicle Entry module<br/><XCircle size={14} style={{color:'#e53e3e', verticalAlign: 'middle', marginRight: '4px'}}/> Core modules<br/><XCircle size={14} style={{color:'#e53e3e', verticalAlign: 'middle', marginRight: '4px'}}/> Admin / Master Lists</div>
           </div>
           <div style={{ background: '#faf5ff', border: '1px solid #e9d8fd', borderRadius: '10px', padding: '16px' }}>
-            <h4 style={{ color: '#805ad5', marginBottom: '12px' }}>🟣 Dashboard User</h4>
-            <div style={{ fontSize: '12px', lineHeight: '22px' }}>✅ View Dashboard Analytics<br/>❌ Data Entry<br/>❌ User Management</div>
+            <h4 style={{ color: '#805ad5', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><BarChart3 size={16} style={{color:'#805ad5'}} /> Dashboard User</h4>
+            <div style={{ fontSize: '12px', lineHeight: '22px' }}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /> View Dashboard Analytics<br/><XCircle size={14} style={{color:'#e53e3e', verticalAlign: 'middle', marginRight: '4px'}}/> Data Entry<br/><XCircle size={14} style={{color:'#e53e3e', verticalAlign: 'middle', marginRight: '4px'}}/> User Management</div>
           </div>
         </div>
       </div>
@@ -184,7 +227,11 @@ const Users = () => {
             )}
             <div className="form-group"><label>Role</label>
               <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                {['Admin', 'Supervisor', 'Security', 'Dashboard User', 'User'].map(r => <option key={r} value={r}>{r}</option>)}
+                {editingUser && <option value="Admin">Admin</option>}
+                <option value="Supervisor">Supervisor</option>
+                <option value="User">User</option>
+                <option value="Dashboard User">Dashboard User</option>
+                <option value="Security">Security</option>
               </select>
             </div>
             <div className="modal-footer">

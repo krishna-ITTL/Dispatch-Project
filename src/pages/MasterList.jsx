@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
+import { Trash2 } from 'lucide-react';
 
 // Default master data from legacy system
 const DEFAULT_MASTER_DATA = {
@@ -45,9 +46,21 @@ const MasterList = () => {
 
   const categories = Array.from(new Set(masterList.map(m => m.category_key)));
   const itemsByCategory = categories.reduce((acc, cat) => {
-    acc[cat] = masterList.filter(m => m.category_key === cat);
+    acc[cat] = masterList.filter(m => m.category_key === cat && m.status !== 'pending');
     return acc;
   }, {});
+  const pendingItems = masterList.filter(m => m.status === 'pending');
+
+  const approveItem = async (id) => {
+    try {
+      const { error } = await supabase.from('master_list').update({ status: 'approved' }).eq('id', id);
+      if (error) throw error;
+      toast('Item approved');
+      fetchData();
+    } catch (err) {
+      toast('Failed to approve item', 'error');
+    }
+  };
 
   const seedDefaultData = async () => {
     if (!window.confirm('This will add all default master data (Transformer Ratings, Types, Vehicles, Customers, Packing Items, Shifts). Continue?')) return;
@@ -167,7 +180,28 @@ const MasterList = () => {
           <p style={{ marginBottom: '20px' }}>Click <strong>"🌱 Load Default Data"</strong> above to populate all categories from the legacy system, or create a new category manually.</p>
         </div>
       ) : (
-        <div className="master-grid">
+        <>
+          {user?.role === 'Admin' && pendingItems.length > 0 && (
+            <div style={{ marginBottom: '24px', background: '#fffaf0', border: '1px solid #ed8936', borderRadius: '8px', padding: '16px' }}>
+              <h3 style={{ color: '#c05621', marginBottom: '12px', fontSize: '16px' }}>⚠️ Pending Auto-Learned Items</h3>
+              <p style={{ fontSize: '13px', color: '#7b341e', marginBottom: '16px' }}>These items were automatically learned from user input. Approve them to make them available in dropdowns globally.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
+                {pendingItems.map(item => (
+                  <div key={item.id} style={{ background: '#fff', border: '1px solid #feebc8', borderRadius: '6px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{item.value}</div>
+                      <div style={{ fontSize: '11px', color: '#718096' }}>Category: {item.category_key}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="btn" style={{ background: '#38a169', color: '#fff', padding: '4px 8px', fontSize: '12px' }} onClick={() => approveItem(item.id)}>Approve</button>
+                      <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '12px', color: '#e53e3e', borderColor: '#fc8181' }} onClick={() => deleteItem(item.id, item.value)}>Reject</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="master-grid">
           {categories.map(cat => {
             const items = itemsByCategory[cat];
             return (
@@ -175,7 +209,7 @@ const MasterList = () => {
                 <div className="master-card-header">
                   <h4>⚡ {cat} <span className="count">{items.length} items</span></h4>
                   <div className="header-actions">
-                    <button className="icon-btn danger" onClick={() => deleteCategory(cat)}>🗑️</button>
+                    <button className="icon-btn danger" onClick={() => deleteCategory(cat)} title="Delete"><img src="/Asserts/bin.gif" width="18" height="18" alt="Delete" /></button>
                   </div>
                 </div>
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -203,6 +237,7 @@ const MasterList = () => {
             );
           })}
         </div>
+        </>
       )}
 
       {newCategoryModalOpen && (

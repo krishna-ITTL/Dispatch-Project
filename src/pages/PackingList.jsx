@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
@@ -139,7 +140,7 @@ const PackingList = () => {
         { data: masterLists }
       ] = await Promise.all([
         supabase.from('work_orders').select('*').order('id', { ascending: false }),
-        supabase.from('master_list').select('*').eq('category_key', 'Packing list items').order('value', { ascending: true })
+        supabase.from('master_list').select('*').eq('category_key', 'Packing List Items').eq('status', 'approved').order('value', { ascending: true })
       ]);
 
       const fetchedWOs = wos || [];
@@ -585,8 +586,8 @@ const PackingList = () => {
                 <td>{p.packing_start_date || '—'}</td>
                 <td>{p.packing_end_date || '—'}</td>
                 <td style={{ display: 'flex', gap: '4px' }}>
-                  {canEdit() && <button className="icon-btn" onClick={() => openModal(p)}>✏️</button>}
-                  {canDelete() && <button className="icon-btn danger" onClick={() => deleteItem(p.id)}>🗑️</button>}
+                  {canEdit() && <button className="icon-btn" onClick={() => openModal(p)} title="Edit"><img src="/Asserts/edit.gif" width="18" height="18" alt="Edit" /></button>}
+                  {canDelete() && <button className="icon-btn danger" onClick={() => deleteItem(p.id)} title="Delete"><img src="/Asserts/bin.gif" width="18" height="18" alt="Delete" /></button>}
                 </td>
               </tr>
             ))}

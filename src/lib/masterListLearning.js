@@ -86,13 +86,13 @@ export async function processLearnedItems(itemsArray) {
     const { data: existing } = await supabase
       .from('master_list')
       .select('value')
-      .eq('category_key', 'Packing list items');
+      .eq('category_key', 'Packing List Items');
 
     const existingLower = new Set((existing || []).map(e => e.value.toLowerCase()));
 
     const newItems = namesArray
       .filter(name => !existingLower.has(name.toLowerCase()))
-      .map(name => ({ category_key: 'Packing list items', value: name }));
+      .map(name => ({ category_key: 'Packing List Items', value: name, status: 'pending' }));
 
     if (newItems.length === 0) return;
 

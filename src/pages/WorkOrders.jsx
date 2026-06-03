@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Eye, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
@@ -355,9 +356,9 @@ const WorkOrders = () => {
                 <button className="pack-btn">{packCounts[wo.id] || 0} pack</button>
                 <button className="load-btn">{loadCounts[wo.id] || 0} load</button>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <button className="icon-btn" title="View Details" onClick={() => setViewingWO(wo)}>👁️</button>
+                  <button className="icon-btn" title="View Details" onClick={() => setViewingWO(wo)}><img src="/Asserts/view.gif" width="18" height="18" alt="View" /></button>
                   {!wo.approved_by && canEdit() && (
-                    <button className="icon-btn" title="Approve" onClick={() => approveWO(wo)}>✅</button>
+                    <button className="icon-btn" title="Approve" onClick={() => approveWO(wo)}><img src="/Asserts/approve.png" width="18" height="18" alt="Approve" /></button>
                   )}
                   {canEdit() && <button className="icon-btn edit" onClick={() => openModal(wo)}>✎</button>}
                   {canDelete() && <button className="icon-btn danger" onClick={() => deleteWO(wo.id, wo.wo_num)}>🗑</button>}

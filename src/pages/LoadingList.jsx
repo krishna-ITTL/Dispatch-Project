@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
 import { logActivity } from '../lib/activityLogger';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const LOAD_STATUSES = ['Loading Pending', 'Loading In Progress', 'Ready for Dispatch', 'Dispatched'];
@@ -435,10 +436,10 @@ const LoadingList = () => {
                     <td><span style={{ ...statusBadgeStyle(ll.status), padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600' }}>{ll.status}</span></td>
                     <td style={{ display: 'flex', gap: '4px' }}>
                       {user?.role !== 'Security' && (
-                        <button className="icon-btn" title="View" onClick={() => setViewingLL(ll)}>👁️</button>
+                        <button className="icon-btn" title="View" onClick={() => setViewingLL(ll)}><img src="/Asserts/view.gif" width="18" height="18" alt="View" /></button>
                       )}
-                      <button className="icon-btn" title="Edit" onClick={() => openEditLoading(ll)}>✏️</button>
-                      <button className="icon-btn danger" title="Delete" onClick={() => deleteLoadingList(ll.id)}>🗑️</button>
+                      <button className="icon-btn" title="Edit" onClick={() => openEditLoading(ll)}><img src="/Asserts/edit.gif" width="18" height="18" alt="Edit" /></button>
+                      <button className="icon-btn danger" title="Delete" onClick={() => deleteLoadingList(ll.id)}><img src="/Asserts/bin.gif" width="18" height="18" alt="Delete" /></button>
                     </td>
                   </tr>
                 )})}

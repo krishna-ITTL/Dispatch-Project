@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
+import Lottie from 'lottie-react';
+import loadingAnimation from './assets/Loading Animations.json';
 
 import Layout from './components/Layout';
 import { ToastProvider } from './components/ToastProvider';
@@ -48,6 +50,7 @@ function App() {
 
   const fetchProfile = async (userId) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -74,11 +77,13 @@ function App() {
       await seedMasterListIfEmpty();
     } catch (error) {
       console.error('Error fetching profile:', error);
+      setUserProfile(null);
       await supabase.auth.signOut();
     } finally {
       setLoading(false);
     }
   };
+
 
   const seedMasterListIfEmpty = async () => {
     if (seeded.current) return;
@@ -117,15 +122,18 @@ function App() {
 
   const handleLogout = async () => {
     seeded.current = false;
+    setUserProfile(null);
+    setSession(null);
     await supabase.auth.signOut();
   };
+
+  const LottieComponent = Lottie.default || Lottie;
 
   if (loading || (session && !userProfile)) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--main-bg)', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#e53e3e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-        <div style={{ color: '#718096', fontSize: '14px' }}>Loading...</div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <LottieComponent animationData={loadingAnimation} loop={true} style={{ width: 150, height: 150 }} />
+        <div style={{ color: '#718096', fontSize: '15px', fontWeight: '500' }}>Initializing secure connection...</div>
       </div>
     );
   }

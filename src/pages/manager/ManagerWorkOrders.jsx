@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../../components/ToastProvider';
+import { Eye } from 'lucide-react';
 import './manager.css';
 
 const ManagerWorkOrders = () => {
@@ -192,13 +193,15 @@ const ManagerWorkOrders = () => {
                     <button className="load-btn" style={{ cursor: 'default' }}>{loadCounts[wo.id]?.dispatched || 0}/{loadCounts[wo.id]?.total || 0} load</button>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button className="icon-btn" title="View Details" onClick={() => setViewingWO(wo)}>👁️</button>
+                    <button className="icon-btn" title="View Details" onClick={() => setViewingWO(wo)}><img src="/Asserts/view.gif" width="18" height="18" alt="View" /></button>
                     
                     <button 
                       className={`manager-approve-btn ${isApproved ? 'approved' : ''}`}
                       onClick={(e) => isApproved ? e.preventDefault() : approveWO(e, wo)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      {isApproved ? '✓ Approved' : '✓ Approve'}
+                      <img src="/Asserts/approve.png" width="14" height="14" alt="approve" style={{ filter: isApproved ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(130deg) brightness(94%) contrast(101%)' }} />
+                      {isApproved ? 'Approved' : 'Approve'}
                     </button>
                   </div>
                 </div>
@@ -258,10 +261,11 @@ const ManagerWorkOrders = () => {
               {!approvedWOs.has(viewingWO.id) && !viewingWO.approved_by && (
                 <button 
                   className="manager-approve-btn" 
-                  style={{ flex: 1, justifyContent: 'center' }}
+                  style={{ flex: 1, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '6px' }}
                   onClick={(e) => { approveWO(e, viewingWO); setViewingWO(null); }}
                 >
-                  ✓ Approve
+                  <img src="/Asserts/approve.png" width="14" height="14" alt="approve" style={{ filter: 'brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(130deg) brightness(94%) contrast(101%)' }} />
+                  Approve
                 </button>
               )}
             </div>

@@ -75,10 +75,12 @@ const Sidebar = ({ user, handleLogout }) => {
         gap: '10px'
       }}>
         <div style={{
-          width: '34px', height: '34px', background: 'var(--primary)',
+          width: '38px', height: '38px', background: '#ffffff',
           borderRadius: '8px', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '16px'
-        }}>I</div>
+          justifyContent: 'center', padding: '6px', flexShrink: 0
+        }}>
+          <img src="/Asserts/logo.svg" alt="Company Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        </div>
         <div>
           <div style={{ color: '#fff', fontSize: '13px', fontWeight: '700', letterSpacing: '0.3px' }}>INDOTECH</div>
           <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>Dispatch System</div>
