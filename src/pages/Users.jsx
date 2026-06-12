@@ -130,11 +130,12 @@ const Users = () => {
     if (id === user.id) { toast('Cannot delete yourself!', 'error'); return; }
     if (!window.confirm(`Delete user "${name}"?`)) return;
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
+      const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: id });
       if (error) throw error;
       toast('User deleted');
       fetchUsers();
     } catch (e) {
+      console.error('deleteUser error:', e);
       toast('Failed to delete user', 'error');
     }
   };
